@@ -3,7 +3,7 @@ import React from "react";
 import { SparklesCore } from "@/components/ui/sparkles";
 import Navbar from "@/components/Navbar";
 import Globe from "@/components/ui/Globe";
-import VideoPlayer from "@/components/ui/SeflHosted";
+import SelfHostedPlayer from "@/components/ui/SeflHosted";
 
 // Define the preview components in the same file
 function SparklesPreview() {
@@ -42,9 +42,11 @@ export default function HomePage() {
     <main className="relative flex flex-col items-center justify-center">
       <Navbar />
       <SparklesPreview />
-    
-      <Globe/>
-      <VideoPlayer videoId="2PPQ29WRT-rU" title="Explore the Universe with NASA" />
+      <Globe />
+      <SelfHostedPlayer
+        videoSrc="/nasa.mp4" // Fixed: Use relative path from public folder
+        title="Explore the Universe with NASA"
+      />
     </main>
   );
 }
