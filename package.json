@@ -35,6 +35,7 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
+    "framer-motion": "^12.23.12",
     "jsonwebtoken": "^9.0.2",
     "prisma": "^6.14.0"
   }
