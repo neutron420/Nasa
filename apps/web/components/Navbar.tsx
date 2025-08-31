@@ -3,11 +3,21 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showAdminPopup, setShowAdminPopup] = useState(false);
+  const router = useRouter();
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+  const toggleAdminPopup = () => setShowAdminPopup(!showAdminPopup);
+  
+  const handleAdminSignIn = () => {
+    router.push("/auth/signin");
+    setShowAdminPopup(false);
+    if (isMenuOpen) setIsMenuOpen(false);
+  };
 
   return (
     <>
@@ -40,17 +50,20 @@ export default function Navbar() {
           >
             Projects
           </a>
-          <a
-            href="#"
-            className="hover:bg-white/10 hover:text-white transition-all duration-300 px-4 py-2 rounded-full"
+          <button
+            onClick={toggleAdminPopup}
+            className="hover:bg-white/10 hover:text-white transition-all duration-300 px-4 py-2 rounded-full text-sm text-gray-300"
           >
             Admin
-          </a>
+          </button>
         </div>
 
         {/* Desktop Sign In Button */}
         <div className="hidden md:flex items-center">
-          <button className="group flex items-center justify-center gap-2 bg-white text-black font-semibold px-5 py-2 rounded-full text-sm shadow-md hover:bg-gray-200 hover:shadow-lg transform transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75">
+          <a 
+            href="/auth/signin"
+            className="group flex items-center justify-center gap-2 bg-white text-black font-semibold px-5 py-2 rounded-full text-sm shadow-md hover:bg-gray-200 hover:shadow-lg transform transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50"
+          >
             <span>Sign in as Admin</span>
             <svg
               className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1"
@@ -64,7 +77,7 @@ export default function Navbar() {
                 clipRule="evenodd"
               />
             </svg>
-          </button>
+          </a>
         </div>
 
         {/* Mobile Menu Button */}
@@ -118,23 +131,77 @@ export default function Navbar() {
               >
                 Projects
               </a>
-              <a
-                href="#"
-                className="block text-white hover:text-blue-400 hover:bg-white/10 transition-all duration-300 px-4 py-3 rounded-xl text-base font-medium"
-                onClick={toggleMenu}
+              <button
+                onClick={toggleAdminPopup}
+                className="block w-full text-left text-white hover:text-blue-400 hover:bg-white/10 transition-all duration-300 px-4 py-3 rounded-xl text-base font-medium"
               >
                 Admin
-              </a>
+              </button>
             </div>
             
             <div className="pt-4 border-t border-white/20">
-              <button className="w-full bg-white text-black font-semibold px-6 py-3 rounded-xl text-base shadow-md hover:bg-gray-200 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-400">
+              <a 
+                href="/auth/signin"
+                className="w-full bg-white text-black font-semibold px-6 py-3 rounded-xl text-base shadow-md hover:bg-gray-200 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              >
                 Sign in as Admin
-              </button>
+              </a>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Admin Sign In Popup */}
+      {showAdminPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div 
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={toggleAdminPopup}
+          ></div>
+          
+          <div className="relative bg-black border border-gray-800 rounded-2xl p-6 w-[90%] max-w-md shadow-2xl animate-fadeIn">
+            <button 
+              onClick={toggleAdminPopup}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white"
+              aria-label="Close popup"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-white mb-2">Admin Access</h2>
+              <p className="text-gray-400">Sign in to access admin controls</p>
+            </div>
+            
+            <div className="space-y-4">
+              <button
+                onClick={handleAdminSignIn}
+                className="w-full bg-white text-black font-semibold px-6 py-3 rounded-xl text-base shadow-md hover:bg-gray-200 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center justify-center gap-2"
+              >
+                <span>Continue to Sign In</span>
+                <svg
+                  className="w-4 h-4"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+              
+              <p className="text-center text-xs text-gray-500 mt-4">
+                Only authorized personnel can access admin features
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
