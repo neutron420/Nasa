@@ -10,7 +10,7 @@ export default function AdminSignIn() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [category] = useState("admin"); // fixed to Admin
+  const [category] = useState("admin");
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
