@@ -7,11 +7,23 @@ export const getMissions = async (_req: any, res: any) => {
 };
 
 export const createMission = async (req: any, res: any) => {
-  const { title, description, imageUrl } = req.body;
-  const mission = await prisma.mission.create({
-    data: { title, description, imageUrl, userId: req.user.id },
-  });
-  res.json(mission);
+  const { title, description, launchDate, status, imageUrl } = req.body;
+  try {
+    const mission = await prisma.mission.create({
+      data: { 
+        title, 
+        description, 
+        launchDate: new Date(launchDate), 
+        status, 
+        imageUrl, 
+        createdBy: req.user.id 
+      },
+    });
+    res.json(mission);
+  } catch (error) {
+    console.error("Error creating mission:", error);
+    res.status(500).json({ error: "Failed to create mission" });
+  }
 };
 
 export const updateMission = async (req: any, res: any) => {

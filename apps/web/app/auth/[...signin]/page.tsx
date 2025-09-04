@@ -19,9 +19,9 @@ export default function AdminSignIn() {
     setError("");
 
     try {
-      // Updated API endpoint - using environment variable or default to port 3000
+      // Updated API endpoint - using environment variable or default to port 3002
       const API_URL =
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
       const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: {
