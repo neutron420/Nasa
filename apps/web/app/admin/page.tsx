@@ -3,7 +3,16 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
-
+import AdminSidebar from "@/components/AdminSidebar";
+import AdminDashboard from "@/components/AdminDashboard";
+import AdminSettings from "@/components/AdminSettings";
+import AdminNotifications from "@/components/AdminNotifications";
+interface Notification {
+  id: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+  message: string;
+  timestamp: Date;
+}
 
 // Define interfaces for our data models
 interface Mission {
@@ -28,14 +37,30 @@ interface Project {
   createdAt: string;
 }
 
+// Helper function for status colors - this was missing
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case "Completed":
+      return "bg-green-100 text-green-800";
+    case "Active":
+      return "bg-blue-100 text-blue-800";
+    case "Cancelled":
+      return "bg-red-100 text-red-800";
+    case "Planned":
+    default:
+      return "bg-yellow-100 text-yellow-800";
+  }
+};
+
 export default function AdminPage() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("missions");
+  const [activeTab, setActiveTab] = useState("dashboard"); // Changed default to dashboard
   const [missions, setMissions] = useState<Mission[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   
   // Form states for new mission/project
   const [showMissionForm, setShowMissionForm] = useState(false);
@@ -79,6 +104,12 @@ export default function AdminPage() {
         // Fetch missions and projects
         await fetchMissions();
         await fetchProjects();
+
+        // Add welcome notification
+        addNotification({
+          type: "info",
+          message: "Welcome to Admin Dashboard"
+        });
       } catch (err) {
         console.error("Authentication error:", err);
         router.push("/auth/signin");
@@ -110,6 +141,10 @@ export default function AdminPage() {
       setMissions(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
+      addNotification({
+        type: "error",
+        message: "Failed to fetch missions"
+      });
     }
   };
 
@@ -133,6 +168,10 @@ export default function AdminPage() {
       setProjects(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
+      addNotification({
+        type: "error",
+        message: "Failed to fetch projects"
+      });
     }
   };
 
@@ -175,8 +214,17 @@ export default function AdminPage() {
         status: "Planned",
         imageUrl: ""
       });
+
+      addNotification({
+        type: "success",
+        message: "Mission created successfully"
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
+      addNotification({
+        type: "error",
+        message: "Failed to create mission"
+      });
     }
   };
 
@@ -219,8 +267,17 @@ export default function AdminPage() {
         status: "Planned",
         imageUrl: ""
       });
+
+      addNotification({
+        type: "success",
+        message: "Project created successfully"
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
+      addNotification({
+        type: "error",
+        message: "Failed to create project"
+      });
     }
   };
 
@@ -245,8 +302,16 @@ export default function AdminPage() {
       
       // Refresh missions list
       await fetchMissions();
+      addNotification({
+        type: "success",
+        message: "Mission deleted successfully"
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
+      addNotification({
+        type: "error",
+        message: "Failed to delete mission"
+      });
     }
   };
 
@@ -271,9 +336,38 @@ export default function AdminPage() {
       
       // Refresh projects list
       await fetchProjects();
+      addNotification({
+        type: "success",
+        message: "Project deleted successfully"
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
+      addNotification({
+        type: "error",
+        message: "Failed to delete project"
+      });
     }
+  };
+
+  // Notification system
+  const addNotification = ({ type, message }: { type: "success" | "error" | "info" | "warning", message: string }) => {
+    const newNotification: Notification = {
+      id: Date.now().toString(),
+      type,
+      message,
+      timestamp: new Date()
+    };
+    
+    setNotifications(prev => [newNotification, ...prev]);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+      dismissNotification(newNotification.id);
+    }, 5000);
+  };
+  
+  const dismissNotification = (id: string) => {
+    setNotifications(prev => prev.filter(notification => notification.id !== id));
   };
 
   // Loading state
@@ -293,219 +387,194 @@ export default function AdminPage() {
     <div className="bg-black min-h-screen text-white">
       <Navbar />
       
-      <main className="pt-24 px-4 md:px-8 pb-16">
-        <div className="max-w-7xl mx-auto">
-          {/* Admin Header */}
-          <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-            <div>
-              <h1 className="text-4xl font-bold mb-2">Admin Dashboard</h1>
-              <p className="text-gray-400">Manage missions and projects</p>
-            </div>
-            
-            <div className="mt-4 md:mt-0">
-              <button 
-                onClick={() => {
-                  localStorage.removeItem("token");
-                  router.push("/auth/signin");
-                }}
-                className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors duration-300"
-              >
-                Sign Out
-              </button>
-            </div>
-          </div>
-          
-          {/* Tabs */}
-          <div className="flex border-b border-gray-700 mb-8">
-            <button
-              className={`px-6 py-3 font-medium text-lg ${activeTab === "missions" ? "text-blue-400 border-b-2 border-blue-400" : "text-gray-400 hover:text-white"}`}
-              onClick={() => setActiveTab("missions")}
-            >
-              Missions
-            </button>
-            <button
-              className={`px-6 py-3 font-medium text-lg ${activeTab === "projects" ? "text-blue-400 border-b-2 border-blue-400" : "text-gray-400 hover:text-white"}`}
-              onClick={() => setActiveTab("projects")}
-            >
-              Projects
-            </button>
-          </div>
-          
-          {/* Error Message */}
-          {error && (
-            <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded-lg mb-6">
-              {error}
-              <button 
-                className="ml-2 text-red-300 hover:text-white"
-                onClick={() => setError(null)}
-              >
-                ×
-              </button>
-            </div>
-          )}
-          
-          {/* Missions Tab */}
-          {activeTab === "missions" && (
-            <div>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-semibold">Missions List</h2>
-                <button
-                  onClick={() => setShowMissionForm(!showMissionForm)}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center gap-2"
+      {/* Admin Notifications */}
+      <AdminNotifications 
+        notifications={notifications}
+        onDismiss={dismissNotification}
+      />
+      
+      <div className="flex">
+        {/* Admin Sidebar */}
+        <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+        
+        {/* Main Content */}
+        <main className="ml-64 pt-24 px-8 pb-16 w-full">
+          <div className="max-w-6xl mx-auto">
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded-lg mb-6">
+                {error}
+                <button 
+                  className="ml-2 text-red-300 hover:text-white"
+                  onClick={() => setError(null)}
                 >
-                  {showMissionForm ? "Cancel" : (
-                    <>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-                      </svg>
-                      Add Mission
-                    </>
-                  )}
+                  ×
                 </button>
               </div>
-              
-              {/* New Mission Form */}
-              {showMissionForm && (
-                <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-8">
-                  <h3 className="text-xl font-semibold mb-4">Create New Mission</h3>
-                  <form onSubmit={handleCreateMission}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          Title
-                        </label>
-                        <input
-                          type="text"
-                          value={newMission.title}
-                          onChange={(e) => setNewMission({...newMission, title: e.target.value})}
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white"
-                          required
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          Launch Date
-                        </label>
-                        <input
-                          type="date"
-                          value={newMission.launchDate}
-                          onChange={(e) => setNewMission({...newMission, launchDate: e.target.value})}
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white"
-                          required
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          Status
-                        </label>
-                        <select
-                          value={newMission.status}
-                          onChange={(e) => setNewMission({...newMission, status: e.target.value})}
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white"
-                        >
-                          <option value="Planned">Planned</option>
-                          <option value="Active">Active</option>
-                          <option value="Completed">Completed</option>
-                        </select>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          Image URL
-                        </label>
-                        <input
-                          type="text"
-                          value={newMission.imageUrl}
-                          onChange={(e) => setNewMission({...newMission, imageUrl: e.target.value})}
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white"
-                          placeholder="https://example.com/image.jpg"
-                        />
-                      </div>
-                      
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          Description
-                        </label>
-                        <textarea
-                          value={newMission.description}
-                          onChange={(e) => setNewMission({...newMission, description: e.target.value})}
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white h-32"
-                          required
-                        ></textarea>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-6 flex justify-end">
-                      <button
-                        type="submit"
-                        className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors duration-300"
-                      >
-                        Create Mission
-                      </button>
-                    </div>
-                  </form>
+            )}
+            
+            {/* Dashboard Tab */}
+            {activeTab === "dashboard" && (
+              <AdminDashboard missions={missions} projects={projects} />
+            )}
+            
+            {/* Missions Tab */}
+            {activeTab === "missions" && (
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-semibold">Missions List</h2>
+                  <button
+                    onClick={() => setShowMissionForm(!showMissionForm)}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center gap-2"
+                  >
+                    {showMissionForm ? "Cancel" : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                        </svg>
+                        Add Mission
+                      </>
+                    )}
+                  </button>
                 </div>
-              )}
-              
-              {/* Missions Table */}
-              <div className="bg-gray-900 border border-gray-700 rounded-xl overflow-hidden">
-                <div className="overflow-x-auto">
+                
+                {/* New Mission Form */}
+                {showMissionForm && (
+                  <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-8">
+                    <h3 className="text-xl font-semibold mb-4">Create New Mission</h3>
+                    <form onSubmit={handleCreateMission}>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Title
+                          </label>
+                          <input
+                            type="text"
+                            value={newMission.title}
+                            onChange={(e) => setNewMission({...newMission, title: e.target.value})}
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white"
+                            required
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Launch Date
+                          </label>
+                          <input
+                            type="date"
+                            value={newMission.launchDate}
+                            onChange={(e) => setNewMission({...newMission, launchDate: e.target.value})}
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white"
+                            required
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Status
+                          </label>
+                          <select
+                            value={newMission.status}
+                            onChange={(e) => setNewMission({...newMission, status: e.target.value})}
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white"
+                          >
+                            <option value="Planned">Planned</option>
+                            <option value="Active">Active</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Cancelled">Cancelled</option>
+                          </select>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Image URL
+                          </label>
+                          <input
+                            type="text"
+                            value={newMission.imageUrl}
+                            onChange={(e) => setNewMission({...newMission, imageUrl: e.target.value})}
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white"
+                            placeholder="https://example.com/image.jpg"
+                          />
+                        </div>
+                        
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Description
+                          </label>
+                          <textarea
+                            value={newMission.description}
+                            onChange={(e) => setNewMission({...newMission, description: e.target.value})}
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white h-32"
+                            required
+                          ></textarea>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-6 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setShowMissionForm(false)}
+                          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg mr-2"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                        >
+                          Create Mission
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+                
+                {/* Missions List */}
+                <div className="bg-gray-900/50 border border-gray-800 rounded-xl overflow-hidden">
                   <table className="w-full">
                     <thead>
-                      <tr className="bg-gray-800">
+                      <tr className="bg-gray-800/50">
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Title</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Launch Date</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-700">
+                    <tbody className="divide-y divide-gray-800">
                       {missions.length > 0 ? (
                         missions.map((mission) => (
-                          <tr key={mission.id} className="hover:bg-gray-800/50">
+                          <tr key={mission.id} className="hover:bg-gray-800/30">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
-                                {mission.imageUrl && (
-                                  <div className="flex-shrink-0 h-10 w-10 mr-3">
-                                    <img 
-                                      src={mission.imageUrl} 
-                                      alt={mission.title} 
-                                      className="h-10 w-10 rounded-full object-cover"
-                                    />
+                                {mission.imageUrl ? (
+                                  <img src={mission.imageUrl} alt={mission.title} className="h-10 w-10 rounded-full mr-3 object-cover" />
+                                ) : (
+                                  <div className="h-10 w-10 rounded-full bg-blue-600/30 flex items-center justify-center mr-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                                    </svg>
                                   </div>
                                 )}
                                 <div>
-                                  <div className="text-sm font-medium">{mission.title}</div>
+                                  <div className="text-sm font-medium text-white">{mission.title}</div>
+                                  <div className="text-sm text-gray-400 truncate max-w-xs">{mission.description}</div>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                               {new Date(mission.launchDate).toLocaleDateString()}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                mission.status === "Completed" ? "bg-green-100 text-green-800" :
-                                mission.status === "Active" ? "bg-blue-100 text-blue-800" :
-                                "bg-yellow-100 text-yellow-800"
-                              }`}>
+                              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(mission.status)}`}>
                                 {mission.status}
                               </span>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                              <button 
-                                className="text-blue-400 hover:text-blue-300 mr-4"
-                                onClick={() => {
-                                  // Edit functionality would go here
-                                  alert("Edit functionality to be implemented");
-                                }}
-                              >
-                                Edit
-                              </button>
-                              <button 
-                                className="text-red-400 hover:text-red-300"
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                              <button
                                 onClick={() => handleDeleteMission(mission.id)}
+                                className="text-red-400 hover:text-red-300"
                               >
                                 Delete
                               </button>
@@ -515,7 +584,7 @@ export default function AdminPage() {
                       ) : (
                         <tr>
                           <td colSpan={4} className="px-6 py-4 text-center text-gray-400">
-                            No missions found. Create your first mission!
+                            No missions found
                           </td>
                         </tr>
                       )}
@@ -523,117 +592,116 @@ export default function AdminPage() {
                   </table>
                 </div>
               </div>
-            </div>
-          )}
-          
-          {/* Projects Tab */}
-          {activeTab === "projects" && (
-            <div>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-semibold">Projects List</h2>
-                <button
-                  onClick={() => setShowProjectForm(!showProjectForm)}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center gap-2"
-                >
-                  {showProjectForm ? "Cancel" : (
-                    <>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-                      </svg>
-                      Add Project
-                    </>
-                  )}
-                </button>
-              </div>
-              
-              {/* New Project Form */}
-              {showProjectForm && (
-                <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-8">
-                  <h3 className="text-xl font-semibold mb-4">Create New Project</h3>
-                  <form onSubmit={handleCreateProject}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          Title
-                        </label>
-                        <input
-                          type="text"
-                          value={newProject.title}
-                          onChange={(e) => setNewProject({...newProject, title: e.target.value})}
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white"
-                          required
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          Start Date
-                        </label>
-                        <input
-                          type="date"
-                          value={newProject.startDate}
-                          onChange={(e) => setNewProject({...newProject, startDate: e.target.value})}
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white"
-                          required
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          Status
-                        </label>
-                        <select
-                          value={newProject.status}
-                          onChange={(e) => setNewProject({...newProject, status: e.target.value})}
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white"
-                        >
-                          <option value="Planned">Planned</option>
-                          <option value="Active">Active</option>
-                          <option value="Completed">Completed</option>
-                        </select>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          Image URL
-                        </label>
-                        <input
-                          type="text"
-                          value={newProject.imageUrl}
-                          onChange={(e) => setNewProject({...newProject, imageUrl: e.target.value})}
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white"
-                          placeholder="https://example.com/image.jpg"
-                        />
-                      </div>
-                      
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          Description
-                        </label>
-                        <textarea
-                          value={newProject.description}
-                          onChange={(e) => setNewProject({...newProject, description: e.target.value})}
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white h-32"
-                          required
-                        ></textarea>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-6 flex justify-end">
-                      <button
-                        type="submit"
-                        className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors duration-300"
-                      >
-                        Create Project
-                      </button>
-                    </div>
-                  </form>
+            )}
+            
+            {/* Projects Tab */}
+            {activeTab === "projects" && (
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-semibold">Projects List</h2>
+                  <button
+                    onClick={() => setShowProjectForm(!showProjectForm)}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center gap-2"
+                  >
+                    {showProjectForm ? "Cancel" : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                        </svg>
+                        Add Project
+                      </>
+                    )}
+                  </button>
                 </div>
-              )}
-              
-              {/* Projects Table */}
-              <div className="bg-gray-900 border border-gray-700 rounded-xl overflow-hidden">
-                <div className="overflow-x-auto">
+                
+                {/* New Project Form */}
+                {showProjectForm && (
+                  <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-8">
+                    <h3 className="text-xl font-semibold mb-4">Create New Project</h3>
+                    <form onSubmit={handleCreateProject}>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Title
+                          </label>
+                          <input
+                            type="text"
+                            value={newProject.title}
+                            onChange={(e) => setNewProject({...newProject, title: e.target.value})}
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white"
+                            required
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Start Date
+                          </label>
+                          <input
+                            type="date"
+                            value={newProject.startDate}
+                            onChange={(e) => setNewProject({...newProject, startDate: e.target.value})}
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white"
+                            required
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Status
+                          </label>
+                          <select
+                            value={newProject.status}
+                            onChange={(e) => setNewProject({...newProject, status: e.target.value})}
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white"
+                          >
+                            <option value="Planned">Planned</option>
+                            <option value="Active">Active</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Cancelled">Cancelled</option>
+                          </select>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Image URL
+                          </label>
+                          <input
+                            type="text"
+                            value={newProject.imageUrl}
+                            onChange={(e) => setNewProject({...newProject, imageUrl: e.target.value})}
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white"
+                            placeholder="https://example.com/image.jpg"
+                          />
+                        </div>
+                        
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Description
+                          </label>
+                          <textarea
+                            value={newProject.description}
+                            onChange={(e) => setNewProject({...newProject, description: e.target.value})}
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white h-32"
+                            required
+                          ></textarea>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-6 flex justify-end">
+                        <button
+                          type="submit"
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                        >
+                          Create Project
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+                
+                {/* Projects List */}
+                <div className="bg-gray-900/50 border border-gray-800 rounded-xl overflow-hidden">
                   <table className="w-full">
                     <thead>
                       <tr className="bg-gray-800">
@@ -667,11 +735,7 @@ export default function AdminPage() {
                               {new Date(project.startDate).toLocaleDateString()}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                project.status === "Completed" ? "bg-green-100 text-green-800" :
-                                project.status === "Active" ? "bg-blue-100 text-blue-800" :
-                                "bg-yellow-100 text-yellow-800"
-                              }`}>
+                              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(project.status)}`}>
                                 {project.status}
                               </span>
                             </td>
@@ -705,10 +769,15 @@ export default function AdminPage() {
                   </table>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
-      </main>
+            )}
+            
+            {/* Settings Tab */}
+            {activeTab === "settings" && (
+              <AdminSettings />
+            )}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
