@@ -10,6 +10,7 @@ async function main() {
     where: { email: "admin@nasa.com" },
     update: {},
     create: {
+      name: "NASA Admin",
       email: "admin@nasa.com",
       password: hashedPassword,
       role: "ADMIN",

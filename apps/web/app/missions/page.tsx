@@ -14,7 +14,7 @@ interface Mission {
   category: string;
   imageUrl?: string;
   mediaType?: string;
-  source: 'apod' | 'rover' | 'hubble' | 'jwst';
+  source: 'apod' | 'rover' | 'hubble' | 'jwst' | 'admin';
 }
 
 // NASA Mission Statistics Component
@@ -159,7 +159,8 @@ const MissionCard: React.FC<{ mission: Mission }> = ({ mission }) => {
           <span className="px-3 py-1 text-xs font-semibold rounded-full bg-gray-800 text-white border border-gray-700">
             {mission.source === 'apod' ? 'ASTRONOMY' : 
              mission.source === 'rover' ? 'MARS' : 
-             mission.source === 'hubble' ? 'HUBBLE' : 'JWST'}
+             mission.source === 'hubble' ? 'HUBBLE' : 
+             mission.source === 'jwst' ? 'JWST' : 'ADMIN'}
           </span>
         </div>
 
@@ -190,14 +191,63 @@ export default function MissionsPage() {
 
   useEffect(() => {
     const fetchMissions = async () => {
+      try {
+        setLoading(true);
+        setFetchProgress("Fetching missions from database...");
+        
+        // Fetch missions from your backend API
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
+        const response = await fetch(`${API_URL}/missions`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch missions: ${response.status}`);
+        }
+        
+        const backendMissions = await response.json();
+        
+        // Transform backend data to match expected format
+        const transformedMissions: Mission[] = backendMissions.map((mission: any) => ({
+          id: mission.id.toString(),
+          title: mission.title,
+          description: mission.description,
+          date: mission.launchDate || mission.createdAt,
+          category: mission.status || 'Mission',
+          imageUrl: mission.imageUrl,
+          mediaType: 'image',
+          source: 'admin' as const
+        }));
+        
+        setMissions(transformedMissions);
+        setFilteredMissions(transformedMissions);
+        
+        // Get unique categories
+        const uniqueCategories = Array.from(new Set(transformedMissions.map(m => m.category)));
+        setCategories(uniqueCategories);
+        
+        setFetchProgress("");
+        
+        // If no missions from backend, fallback to NASA API data
+        if (transformedMissions.length === 0) {
+          await fetchNASAData();
+        }
+        
+      } catch (error) {
+        console.error('Error fetching missions:', error);
+        setError(error instanceof Error ? error.message : 'Failed to fetch missions');
+        
+        // Fallback to NASA API data
+        await fetchNASAData();
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    const fetchNASAData = async () => {
       const apiKey = "pdtag40NLaH9jCvTaTWWBv37BuyGEZo3ou2M0OIl";
       let allMissions: Mission[] = [];
       
       try {
-        setLoading(true);
-        
-        // 1. Fetch APOD data (30 days of content)
-        setFetchProgress("Fetching Astronomy Pictures of the Day...");
+        setFetchProgress("Fetching NASA APOD data as fallback...");
         console.log("🔭 Fetching APOD data...");
         
         const apodRes = await fetch(

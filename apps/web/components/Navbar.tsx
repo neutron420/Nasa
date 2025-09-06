@@ -4,14 +4,19 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showAdminPopup, setShowAdminPopup] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const router = useRouter();
+  const { state, logout } = useAuth();
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
   const toggleAdminPopup = () => setShowAdminPopup(!showAdminPopup);
+  const toggleUserMenu = () => setShowUserMenu(!showUserMenu);
   
   const handleAdminSignIn = () => {
     router.push("/auth/signin");
@@ -58,26 +63,120 @@ export default function Navbar() {
           </button>
         </div>
 
-        {/* Desktop Sign In Button */}
-        <div className="hidden md:flex items-center">
-          <a 
-            href="/auth/signin"
-            className="group flex items-center justify-center gap-2 bg-white text-black font-semibold px-5 py-2 rounded-full text-sm shadow-md hover:bg-gray-200 hover:shadow-lg transform transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50"
-          >
-            <span>Sign in as Admin</span>
-            <svg
-              className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
+        {/* Desktop Auth Section */}
+        <div className="hidden md:flex items-center relative">
+          {state.user ? (
+            /* User is logged in - show profile */
+            <div className="relative">
+              <button
+                onClick={toggleUserMenu}
+                className="group flex items-center gap-3 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-full text-sm shadow-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              >
+                <div className="bg-blue-600/30 p-1.5 rounded-full">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <span className="font-medium">{state.user.name}</span>
+                <svg className={`w-4 h-4 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+              
+              {/* User dropdown menu */}
+              <AnimatePresence>
+                {showUserMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute right-0 top-full mt-2 w-64 bg-black/90 backdrop-blur-xl border border-gray-700 rounded-xl shadow-2xl z-50"
+                  >
+                    <div className="p-4">
+                      <div className="flex items-center gap-3 mb-4 pb-3 border-b border-gray-700">
+                        <div className="bg-blue-600/30 p-2 rounded-full">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-white font-medium">{state.user.name}</p>
+                          <p className="text-gray-400 text-sm">{state.user.email}</p>
+                          <span className="inline-block bg-blue-600/20 text-blue-300 text-xs px-2 py-0.5 rounded-full mt-1">
+                            {state.user.role}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Link
+                          href="/admin"
+                          onClick={() => setShowUserMenu(false)}
+                          className="block text-gray-300 hover:text-white hover:bg-white/10 px-3 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                          </svg>
+                          Admin Dashboard
+                        </Link>
+                        
+                        <button
+                          onClick={() => {
+                            router.push('/admin?tab=settings');
+                            setShowUserMenu(false);
+                          }}
+                          className="w-full text-left text-gray-300 hover:text-white hover:bg-white/10 px-3 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          Profile Settings
+                        </button>
+                        
+                        <hr className="border-gray-700 my-2" />
+                        
+                        <button
+                          onClick={() => {
+                            logout();
+                            setShowUserMenu(false);
+                            router.push('/');
+                          }}
+                          className="w-full text-left text-red-400 hover:text-red-300 hover:bg-red-900/20 px-3 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                          </svg>
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ) : (
+            /* User is not logged in - show sign in button */
+            <a 
+              href="/auth/signin"
+              className="group flex items-center justify-center gap-2 bg-white text-black font-semibold px-5 py-2 rounded-full text-sm shadow-md hover:bg-gray-200 hover:shadow-lg transform transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50"
             >
-              <path
-                fillRule="evenodd"
-                d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </a>
+              <span>Sign in as Admin</span>
+              <svg
+                className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </a>
+          )}
         </div>
 
         {/* Mobile Menu Button */}

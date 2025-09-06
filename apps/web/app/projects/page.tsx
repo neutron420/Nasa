@@ -71,6 +71,51 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     const fetchProjects = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch projects from your backend API first
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
+        const response = await fetch(`${API_URL}/projects`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch projects: ${response.status}`);
+        }
+        
+        const backendProjects = await response.json();
+        
+        // Transform backend data to match expected format
+        const transformedProjects: Project[] = backendProjects.map((project: any) => ({
+          id: project.id,
+          title: project.title,
+          description: project.description,
+          year: new Date(project.startDate || project.createdAt).getFullYear(),
+          status: (project.status === 'Completed' ? 'Completed' : 'Ongoing') as 'Ongoing' | 'Completed',
+          category: project.status || 'NASA Project',
+          imageUrl: project.imageUrl
+        }));
+        
+        if (transformedProjects.length > 0) {
+          // Use backend projects if available
+          const sortedProjects = transformedProjects.sort((a, b) => b.year - a.year);
+          setProjects(sortedProjects);
+          setFilteredProjects(sortedProjects);
+          setCategories(Array.from(new Set(sortedProjects.map((p) => p.category))));
+        } else {
+          // Fallback to NASA API if no backend projects
+          await fetchNASAProjects();
+        }
+        
+      } catch (err) {
+        console.error('Error fetching backend projects:', err);
+        // Fallback to NASA API data
+        await fetchNASAProjects();
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    const fetchNASAProjects = async () => {
       const apiKey = "pdtag40NLaH9jCvTaTWWBv37BuyGEZo3ou2M0OIl";
       try {
         // Fixed date range for consistent projects
@@ -100,8 +145,6 @@ export default function ProjectsPage() {
         setCategories(Array.from(new Set(formatted.map((p) => p.category))));
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to fetch projects");
-      } finally {
-        setLoading(false);
       }
     };
 
