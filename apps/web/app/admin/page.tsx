@@ -9,6 +9,7 @@ import AdminSettings from "@/components/AdminSettings";
 import AdminNotifications from "@/components/AdminNotifications";
 // withAuth import removed as it's not being used
 import { useAuth } from "@/contexts/AuthContext";
+
 interface Notification {
   id: string;
   type: 'success' | 'error' | 'info' | 'warning';
@@ -39,7 +40,7 @@ interface Project {
   createdAt: string;
 }
 
-// Helper function for status colors - this was missing
+// Helper function for status colors
 const getStatusColor = (status: string) => {
   switch (status) {
     case "Completed":
@@ -66,6 +67,10 @@ function AdminPageComponent() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  
+  // Search states
+  const [missionSearch, setMissionSearch] = useState("");
+  const [projectSearch, setProjectSearch] = useState("");
   
   // Form states for new mission/project
   const [showMissionForm, setShowMissionForm] = useState(false);
@@ -186,12 +191,20 @@ function AdminPageComponent() {
         body: JSON.stringify(missionPayload)
       });
       
+      // In handleCreateMission function, update this part:
       if (!response.ok) {
         throw new Error("Failed to create mission");
       }
       
-      // Refresh missions list
+      // Get the newly created mission
+      const createdMission = await response.json();
+      
+      // Update missions list with the new mission
+      setMissions(prevMissions => [...prevMissions, createdMission]);
+      
+      // Also fetch all missions to ensure we have the latest data
       await fetchMissions();
+      
       setShowMissionForm(false);
       setNewMission({
         title: "",
@@ -239,12 +252,20 @@ function AdminPageComponent() {
         body: JSON.stringify(projectPayload)
       });
       
+      // In handleCreateProject function, update this part:
       if (!response.ok) {
         throw new Error("Failed to create project");
       }
       
-      // Refresh projects list
+      // Get the newly created project
+      const createdProject = await response.json();
+      
+      // Update projects list with the new project
+      setProjects(prevProjects => [...prevProjects, createdProject]);
+      
+      // Also fetch all projects to ensure we have the latest data
       await fetchProjects();
+      
       setShowProjectForm(false);
       setNewProject({
         title: "",
@@ -266,6 +287,21 @@ function AdminPageComponent() {
       });
     }
   };
+
+  // Add these filtering functions before the return statement
+  // Filter missions based on search term
+  const filteredMissions = missions.filter(mission => 
+    mission.title.toLowerCase().includes(missionSearch.toLowerCase()) ||
+    mission.description.toLowerCase().includes(missionSearch.toLowerCase()) ||
+    mission.status.toLowerCase().includes(missionSearch.toLowerCase())
+  );
+  
+  // Filter projects based on search term
+  const filteredProjects = projects.filter(project => 
+    project.title.toLowerCase().includes(projectSearch.toLowerCase()) ||
+    project.description.toLowerCase().includes(projectSearch.toLowerCase()) ||
+    project.status.toLowerCase().includes(projectSearch.toLowerCase())
+  );
 
   // Handle mission deletion
   const handleDeleteMission = async (id: number) => {
@@ -424,6 +460,24 @@ function AdminPageComponent() {
                   </button>
                 </div>
                 
+                {/* Search Bar for Missions - add this after the missions tab header */}
+                <div className="mb-6">
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Search missions..."
+                      value={missionSearch}
+                      onChange={(e) => setMissionSearch(e.target.value)}
+                      className="pl-10 pr-4 py-2 border border-gray-700 bg-gray-800 rounded-lg w-full text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+                
                 {/* New Mission Form */}
                 {showMissionForm && (
                   <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-8">
@@ -529,8 +583,8 @@ function AdminPageComponent() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-800">
-                      {missions.length > 0 ? (
-                        missions.map((mission) => (
+                      {filteredMissions.length > 0 ? (
+                        filteredMissions.map((mission) => (
                           <tr key={mission.id} className="hover:bg-gray-800/30">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
@@ -570,7 +624,7 @@ function AdminPageComponent() {
                       ) : (
                         <tr>
                           <td colSpan={4} className="px-6 py-4 text-center text-gray-400">
-                            No missions found
+                            {missionSearch ? "No missions found matching your search" : "No missions found"}
                           </td>
                         </tr>
                       )}
@@ -598,6 +652,24 @@ function AdminPageComponent() {
                       </>
                     )}
                   </button>
+                </div>
+                
+                {/* Search Bar for Projects - add this after the projects tab header */}
+                <div className="mb-6">
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Search projects..."
+                      value={projectSearch}
+                      onChange={(e) => setProjectSearch(e.target.value)}
+                      className="pl-10 pr-4 py-2 border border-gray-700 bg-gray-800 rounded-lg w-full text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
                 
                 {/* New Project Form */}
@@ -698,8 +770,8 @@ function AdminPageComponent() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-700">
-                      {projects.length > 0 ? (
-                        projects.map((project) => (
+                      {filteredProjects.length > 0 ? (
+                        filteredProjects.map((project) => (
                           <tr key={project.id} className="hover:bg-gray-800/50">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
@@ -747,7 +819,7 @@ function AdminPageComponent() {
                       ) : (
                         <tr>
                           <td colSpan={4} className="px-6 py-4 text-center text-gray-400">
-                            No projects found. Create your first project!
+                            {projectSearch ? "No projects found matching your search" : "No projects found. Create your first project!"}
                           </td>
                         </tr>
                       )}
@@ -768,56 +840,6 @@ function AdminPageComponent() {
   );
 }
 
-// Export the component with withAuth protection
 export default function AdminPage() {
-  const { state } = useAuth();
-  const router = useRouter();
-  
-  // Show loading while auth context initializes
-  if (state.loading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-white mx-auto mb-6"></div>
-          <div className="text-white text-xl">Loading...</div>
-        </div>
-      </div>
-    );
-  }
-
-  // Handle authentication redirects
-  useEffect(() => {
-    console.log('🔍 Admin page auth check - user:', state.user, 'token:', !!state.token);
-    
-    if (!state.loading) {
-      if (!state.user || !state.token) {
-        console.log('❌ No user or token, redirecting to signin');
-        router.replace('/auth/signin');
-        return;
-      }
-      
-      const userRole = state.user.role?.toUpperCase();
-      if (userRole !== 'ADMIN') {
-        console.log('❌ User role is not admin:', state.user.role, 'redirecting to signin');
-        router.replace('/auth/signin');
-        return;
-      }
-      
-      console.log('✅ Admin authentication successful');
-    }
-  }, [state.loading, state.user, state.token, router]);
-
-  // Show loading or redirect states
-  if (state.loading || !state.user || !state.token || state.user.role?.toUpperCase() !== 'ADMIN') {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-white mx-auto mb-6"></div>
-          <div className="text-white text-xl">Loading...</div>
-        </div>
-      </div>
-    );
-  }
-
   return <AdminPageComponent />;
 }
