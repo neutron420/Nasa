@@ -56,7 +56,7 @@ const getStatusColor = (status: string) => {
 };
 
 function AdminPageComponent() {
-  const router = useRouter();
+// Router removed since it's not being used
   const searchParams = useSearchParams();
   const { state } = useAuth();
   
