@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auth Debug Test</title>
+</head>
+<body>
+    <h1>Authentication Debug Test</h1>
+    <div>
+        <h2>Test Login</h2>
+        <button onclick="testLogin()">Test Login API</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function testLogin() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                console.log('🔐 Testing login API...');
+                
+                const response = await fetch('http://localhost:3002/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        email: 'admin@nasa.com', 
+                        password: 'admin123' 
+                    }),
+                });
+
+                console.log('📡 Response status:', response.status);
+                const data = await response.json();
+                console.log('📡 Response data:', data);
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <h3>✅ Login Success!</h3>
+                        <p>Token: ${data.token ? 'Received' : 'Missing'}</p>
+                        <p>Token length: ${data.token ? data.token.length : 'N/A'}</p>
+                        
+                        <h4>Testing profile API...</h4>
+                    `;
+                    
+                    // Test profile endpoint
+                    const profileResponse = await fetch('http://localhost:3002/auth/profile', {
+                        headers: {
+                            'Authorization': `Bearer ${data.token}`
+                        }
+                    });
+                    
+                    console.log('👤 Profile response status:', profileResponse.status);
+                    const profileData = await profileResponse.json();
+                    console.log('👤 Profile data:', profileData);
+                    
+                    if (profileResponse.ok) {
+                        resultDiv.innerHTML += `
+                            <h4>✅ Profile Success!</h4>
+                            <p>User ID: ${profileData.id}</p>
+                            <p>Email: ${profileData.email}</p>
+                            <p>Role: ${profileData.role}</p>
+                            <p>Name: ${profileData.name || 'N/A'}</p>
+                        `;
+                    } else {
+                        resultDiv.innerHTML += `
+                            <h4>❌ Profile Failed!</h4>
+                            <p>Status: ${profileResponse.status}</p>
+                            <p>Error: ${JSON.stringify(profileData)}</p>
+                        `;
+                    }
+                } else {
+                    resultDiv.innerHTML = `
+                        <h3>❌ Login Failed!</h3>
+                        <p>Status: ${response.status}</p>
+                        <p>Error: ${JSON.stringify(data)}</p>
+                    `;
+                }
+            } catch (error) {
+                console.error('💥 Error:', error);
+                resultDiv.innerHTML = `
+                    <h3>💥 Error!</h3>
+                    <p>${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

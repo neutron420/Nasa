@@ -25,9 +25,16 @@ export const getMissions = async (_req: any, res: any) => {
 };
 
 export const createMission = async (req: any, res: any) => {
-  const { title, description, imageUrl } = req.body;
+  const { title, description, launchDate, status, imageUrl } = req.body;
   const mission = await prisma.mission.create({
-    data: { title, description, imageUrl, userId: req.user.id },
+    data: { 
+      title, 
+      description, 
+      launchDate: new Date(launchDate), 
+      status, 
+      imageUrl, 
+      createdBy: req.user.id 
+    },
   });
   res.json(mission);
 };

@@ -1,14 +1,49 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
 }
 
+interface UserProfile {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+}
+
 const AdminSidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   const router = useRouter();
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+        
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
+        const response = await fetch(`${API_URL}/auth/profile`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data);
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+      }
+    };
+    
+    fetchUserProfile();
+  }, []);
 
   const handleSignOut = () => {
     localStorage.removeItem("token");
@@ -61,10 +96,38 @@ const AdminSidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
           </nav>
         </div>
         
-        <div className="mt-auto">
+        <div className="mt-auto space-y-4">
+          {/* User Profile Section */}
+          {user && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-gray-800/50 rounded-lg p-4 border border-gray-700"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="bg-blue-600/30 p-2 rounded-full">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white truncate">
+                    {user.name}
+                  </p>
+                  <p className="text-xs text-gray-400 truncate">
+                    {user.email}
+                  </p>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-600/20 text-blue-300 mt-1">
+                    {user.role}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          )}
+          
           <button
             onClick={handleSignOut}
-            className="w-full flex items-center px-4 py-3 text-red-400 hover:bg-red-600/20 hover:text-red-300 rounded-lg"
+            className="w-full flex items-center px-4 py-3 text-red-400 hover:bg-red-600/20 hover:text-red-300 rounded-lg transition-colors duration-200"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />

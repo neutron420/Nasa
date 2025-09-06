@@ -1,61 +1,107 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { motion } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function AdminSignIn() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [category] = useState("admin");
+  const [localError, setLocalError] = useState("");
   const router = useRouter();
+  const { state, login, clearError } = useAuth();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    console.log('🔍 Sign-in page useEffect - loading:', state.loading, 'user:', !!state.user, 'token:', !!state.token);
+    if (state.user && state.token && !state.loading) {
+      console.log('✈️ Redirecting authenticated user to /admin page');
+      router.push('/admin');
+    }
+  }, [state.user, state.token, state.loading, router]);
+
+  // Clear errors when component mounts
+  useEffect(() => {
+    clearError();
+    setLocalError('');
+  }, []); // Empty dependency array to run only once
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError("");
+    setLocalError('');
+    clearError();
 
     try {
-      // Updated API endpoint - using environment variable or default to port 3002
-      const API_URL =
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
-      const response = await fetch(`${API_URL}/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
+      console.log('🚀 Submitting login form...');
+      console.log('🔑 Current state before login:', {
+        loading: state.loading,
+        user: !!state.user,
+        token: !!state.token,
+        error: state.error
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to sign in");
-      }
-
-      // Store token in localStorage
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("adminCategory", category);
-
-      // Check if user is admin before redirecting
-      const tokenData = JSON.parse(atob(data.token.split(".")[1]));
-      if (tokenData.role !== "ADMIN") {
-        throw new Error("Not authorized as admin");
-      }
-
-      // Redirect based on fixed category
-      router.push(`/${category}`);
+      
+      await login(email, password);
+      
+      console.log('✅ Login completed successfully!');
+      console.log('🔑 Current state after login:', {
+        loading: state.loading,
+        user: !!state.user,
+        token: !!state.token,
+        error: state.error
+      });
+      
+      // Wait for multiple attempts to ensure state update
+      let attempts = 0;
+      const checkStateAndRedirect = () => {
+        attempts++;
+        console.log(`🔍 Attempt ${attempts} - checking auth state:`, {
+          loading: state.loading,
+          user: !!state.user,
+          token: !!state.token
+        });
+        
+        if (state.user && state.token && !state.loading) {
+          console.log('✈️ State is ready, redirecting to /admin...');
+          router.push('/admin');
+        } else if (attempts < 20) {
+          // Try again in 50ms
+          setTimeout(checkStateAndRedirect, 50);
+        } else {
+          console.error('❌ Timeout waiting for auth state update after login');
+          // Force redirect anyway
+          console.log('🔄 Force redirecting to /admin...');
+          router.push('/admin');
+        }
+      };
+      
+      checkStateAndRedirect();
+      
     } catch (err: unknown) {
-      setError(
+      console.error('❌ Login failed in handleSubmit:', err);
+      setLocalError(
         err instanceof Error ? err.message : "An unexpected error occurred"
       );
-    } finally {
-      setLoading(false);
     }
   };
+  
+  // Show loading if auth context is still loading
+  if (state.loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-white mx-auto mb-6"></div>
+          <div className="text-white text-xl">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render login form if user is already authenticated
+  if (state.user && state.token) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white flex flex-col">
@@ -77,13 +123,13 @@ export default function AdminSignIn() {
               <p className="text-gray-400 mt-2">Access mission control</p>
             </div>
 
-            {error && (
+            {(localError || state.error) && (
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 className="bg-red-900/30 border border-red-500/50 text-red-200 px-4 py-3 rounded-xl mb-6"
               >
-                {error}
+                {localError || state.error}
               </motion.div>
             )}
 
@@ -145,10 +191,10 @@ export default function AdminSignIn() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 type="submit"
-                disabled={loading}
+                disabled={state.loading}
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all duration-300 disabled:opacity-50 shadow-lg"
               >
-                {loading ? (
+                {state.loading ? (
                   <div className="flex items-center justify-center">
                     <svg
                       className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"

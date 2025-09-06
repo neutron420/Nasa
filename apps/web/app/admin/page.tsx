@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import AdminSidebar from "@/components/AdminSidebar";
 import AdminDashboard from "@/components/AdminDashboard";
 import AdminSettings from "@/components/AdminSettings";
 import AdminNotifications from "@/components/AdminNotifications";
+// withAuth import removed as it's not being used
+import { useAuth } from "@/contexts/AuthContext";
 interface Notification {
   id: string;
   type: 'success' | 'error' | 'info' | 'warning';
@@ -52,11 +54,14 @@ const getStatusColor = (status: string) => {
   }
 };
 
-export default function AdminPage() {
+function AdminPageComponent() {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("dashboard"); // Changed default to dashboard
+  const searchParams = useSearchParams();
+  const { state } = useAuth();
+  
+  // Get tab from URL params or default to dashboard
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabParam || "dashboard");
   const [missions, setMissions] = useState<Mission[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -80,46 +85,27 @@ export default function AdminPage() {
     imageUrl: ""
   });
 
-  // Check authentication on component mount
+  // Handle tab from URL and initialize data
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        
-        if (!token) {
-          router.push("/auth/signin");
-          return;
-        }
-        
-        // Verify token by decoding it
-        const tokenData = JSON.parse(atob(token?.split(".")[1] || ""));
-        
-        if (tokenData.role !== "ADMIN") {
-          router.push("/auth/signin");
-          return;
-        }
-        
-        setIsAuthenticated(true);
-        
-        // Fetch missions and projects
-        await fetchMissions();
-        await fetchProjects();
-
-        // Add welcome notification
-        addNotification({
-          type: "info",
-          message: "Welcome to Admin Dashboard"
-        });
-      } catch (err) {
-        console.error("Authentication error:", err);
-        router.push("/auth/signin");
-      } finally {
-        setIsLoading(false);
-      }
+    // Handle tab from URL
+    if (tabParam && tabParam !== activeTab) {
+      setActiveTab(tabParam);
+    }
+    
+    // Initial data fetch
+    const initializeData = async () => {
+      await fetchMissions();
+      await fetchProjects();
+      
+      // Add welcome notification
+      addNotification({
+        type: "info",
+        message: "Welcome to Admin Dashboard"
+      });
     };
     
-    checkAuth();
-  }, [router]);
+    initializeData();
+  }, [tabParam]); // Remove other dependencies to avoid infinite loops
 
   // Fetch missions from API
   const fetchMissions = async () => {
@@ -151,7 +137,7 @@ export default function AdminPage() {
   // Fetch projects from API
   const fetchProjects = async () => {
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
       const token = localStorage.getItem("token");
       
       const response = await fetch(`${API_URL}/projects`, {
@@ -179,7 +165,7 @@ export default function AdminPage() {
   const handleCreateMission = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
       const token = localStorage.getItem("token");
       
       // Create payload that matches backend expectations
@@ -232,7 +218,7 @@ export default function AdminPage() {
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
       const token = localStorage.getItem("token");
       
       // Create payload that matches backend expectations
@@ -286,7 +272,7 @@ export default function AdminPage() {
     if (!confirm("Are you sure you want to delete this mission?")) return;
     
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
       const token = localStorage.getItem("token");
       
       const response = await fetch(`${API_URL}/missions/${id}`, {
@@ -320,7 +306,7 @@ export default function AdminPage() {
     if (!confirm("Are you sure you want to delete this project?")) return;
     
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
       const token = localStorage.getItem("token");
       
       const response = await fetch(`${API_URL}/projects/${id}`, {
@@ -371,7 +357,7 @@ export default function AdminPage() {
   };
 
   // Loading state
-  if (isLoading) {
+  if (state.loading) {
     return (
       <div className="bg-black min-h-screen">
         <Navbar />
@@ -780,4 +766,58 @@ export default function AdminPage() {
       </div>
     </div>
   );
+}
+
+// Export the component with withAuth protection
+export default function AdminPage() {
+  const { state } = useAuth();
+  const router = useRouter();
+  
+  // Show loading while auth context initializes
+  if (state.loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-white mx-auto mb-6"></div>
+          <div className="text-white text-xl">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle authentication redirects
+  useEffect(() => {
+    console.log('🔍 Admin page auth check - user:', state.user, 'token:', !!state.token);
+    
+    if (!state.loading) {
+      if (!state.user || !state.token) {
+        console.log('❌ No user or token, redirecting to signin');
+        router.replace('/auth/signin');
+        return;
+      }
+      
+      const userRole = state.user.role?.toUpperCase();
+      if (userRole !== 'ADMIN') {
+        console.log('❌ User role is not admin:', state.user.role, 'redirecting to signin');
+        router.replace('/auth/signin');
+        return;
+      }
+      
+      console.log('✅ Admin authentication successful');
+    }
+  }, [state.loading, state.user, state.token, router]);
+
+  // Show loading or redirect states
+  if (state.loading || !state.user || !state.token || state.user.role?.toUpperCase() !== 'ADMIN') {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-white mx-auto mb-6"></div>
+          <div className="text-white text-xl">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return <AdminPageComponent />;
 }

@@ -9,6 +9,10 @@ interface AdminProfile {
   createdAt: string;
 }
 
+interface ApiError {
+  error: string;
+}
+
 const AdminSettings: React.FC = () => {
   const [profile, setProfile] = useState<AdminProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,7 +39,10 @@ const AdminSettings: React.FC = () => {
           }
         });
         
-        if (!response.ok) throw new Error("Failed to fetch profile");
+        if (!response.ok) {
+          const errorData = await response.json() as ApiError;
+          throw new Error(errorData.error || "Failed to fetch profile");
+        }
         
         const data = await response.json();
         setProfile(data);
@@ -85,7 +92,10 @@ const AdminSettings: React.FC = () => {
         })
       });
       
-      if (!response.ok) throw new Error("Failed to update profile");
+      if (!response.ok) {
+        const errorData = await response.json() as ApiError;
+        throw new Error(errorData.error || "Failed to update profile");
+      }
       
       const data = await response.json();
       setProfile(data);
@@ -125,7 +135,10 @@ const AdminSettings: React.FC = () => {
         })
       });
       
-      if (!response.ok) throw new Error("Failed to update password");
+      if (!response.ok) {
+        const errorData = await response.json() as ApiError;
+        throw new Error(errorData.error || "Failed to update password");
+      }
       
       setUpdateSuccess(true);
       setFormData(prev => ({
