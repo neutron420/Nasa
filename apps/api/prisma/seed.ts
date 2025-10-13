@@ -17,7 +17,6 @@ async function main() {
     },
   });
 
-  // Missions
   await prisma.mission.createMany({
     data: [
       {
@@ -55,7 +54,7 @@ async function main() {
     skipDuplicates: true,
   });
 
-  console.log("✅ Database seeded successfully!");
+  console.log(" Database seeded successfully!");
 }
 
 main()

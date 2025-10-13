@@ -126,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         const token = localStorage.getItem('token');
         if (!token) {
-          dispatch({ type: 'INIT_ERROR', payload: 'No token found' });
+          dispatch({ type: 'INIT_ERROR', payload: '' });
           return;
         }
 
@@ -186,7 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('📡 Login response:', response.status, response.ok);
 
       if (!response.ok) {
-        console.error('❌ Login failed:', data);
+        console.error(' Login failed:', data);
         throw new Error(data.error || 'Login failed');
       }
 
@@ -194,7 +194,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Validate token
       const validation = validateToken(data.token);
       if (!validation.valid || !validation.payload) {
-        console.error('❌ Token validation failed:', validation);
+        console.error(' Token validation failed:', validation);
         throw new Error('Received invalid token from server');
       }
 
@@ -210,7 +210,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (!profileResponse.ok) {
-        console.error('❌ Profile fetch failed:', profileResponse.status);
+        console.error(' Profile fetch failed:', profileResponse.status);
         throw new Error('Failed to fetch user profile after login');
       }
 
@@ -220,7 +220,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token: data.token } });
       console.log('✅ Login process complete!');
     } catch (error) {
-      console.error('💥 Login error:', error);
+      console.error(' Login error:', error);
       dispatch({ 
         type: 'LOGIN_ERROR', 
         payload: error instanceof Error ? error.message : 'Login failed' 
