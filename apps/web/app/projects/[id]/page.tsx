@@ -29,7 +29,7 @@ export default function ProjectDetailPage() {
 
   useEffect(() => {
     const fetchProject = async () => {
-      const apiKey = "pdtag40NLaH9jCvTaTWWBv37BuyGEZo3ou2M0OIl";
+      const apiKey = "ZCw1VpxeAarfmWdQFL6UZ7mpIZMe2VTPzdgVOVgC";
       try {
         const res = await fetch(
           `https://api.nasa.gov/planetary/apod?api_key=${apiKey}&start_date=2025-01-01&end_date=2025-01-20`
